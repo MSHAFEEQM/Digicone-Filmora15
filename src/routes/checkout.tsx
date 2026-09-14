@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { BRAND, PRODUCT, formatINR } from "@/config/product";
 import { proceedToPayment } from "@/lib/pixel";
 import { PaymentBadges } from "@/components/landing/primitives";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const TITLE = "Checkout | DIGICONE";
 const DESCRIPTION = `Complete your purchase of ${PRODUCT.PRODUCT_PACKAGE_NAME} from ${BRAND.name}.`;
@@ -26,16 +26,39 @@ export const Route = createFileRoute("/checkout")({
 
 function CheckoutPage() {
   const referencePrice = PRODUCT.REFERENCE_PRICE;
+  const paymentFormRef = useRef<HTMLFormElement>(null);
+  const [paymentButtonReady, setPaymentButtonReady] = useState(false);
 
   useEffect(() => {
-    const rzpPaymentForm = document.getElementById("rzp_payment_form");
-    if (!rzpPaymentForm || rzpPaymentForm.hasChildNodes()) return;
+    const form = paymentFormRef.current;
+    if (!form) return;
 
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/payment-button.js";
-    script.async = true;
+    const isButtonPresent = () =>
+      Array.from(form.children).some((el) => el.tagName !== "SCRIPT") ||
+      Boolean(form.querySelector("iframe, button"));
+
+    if (isButtonPresent()) {
+      setPaymentButtonReady(true);
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+      if (isButtonPresent()) {
+        setPaymentButtonReady(true);
+        observer.disconnect();
+      }
+    });
+    observer.observe(form, { childList: true, subtree: true });
+
+    if (!form.querySelector('script[src*="checkout.razorpay.com"]')) {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/payment-button.js";
+      script.async = true;
       script.dataset["payment_button_id"] = "pl_TaJvTTWGagvlZL";
-    rzpPaymentForm.appendChild(script);
+      form.appendChild(script);
+    }
+
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -138,8 +161,22 @@ function CheckoutPage() {
               <Lock className="h-4 w-4" />
               PAY {formatINR(PRODUCT.PRODUCT_PRICE)} — SECURE CHECKOUT
             </button> */}
-            <div className="mt-4 flex items-center justify-center">
-            <form id="rzp_payment_form"></form>
+            <div className="relative mt-6 min-h-[52px] w-full">
+              {!paymentButtonReady ? (
+                <div
+                  className="absolute inset-0 z-10 flex min-h-[52px] items-center justify-center rounded-xl border border-border bg-secondary"
+                  aria-busy="true"
+                  aria-live="polite"
+                >
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <span className="sr-only">Loading payment button</span>
+                </div>
+              ) : null}
+              <form
+                ref={paymentFormRef}
+                id="rzp_payment_form"
+                className="flex min-h-[52px] items-center justify-center"
+              />
             </div>
             <PaymentBadges className="mt-5" />
 
