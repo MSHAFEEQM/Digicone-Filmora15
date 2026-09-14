@@ -40,7 +40,7 @@ export const CHECKOUT_URL = "https://rzp.io/rzp/FnlYI82";
 /** File the buyer can download after a successful payment. */
 export const DOWNLOAD_FILE_URL: string | null = "/images/DIGICONE_Digital_Product_Access.pdf";
 
-export const META_PIXEL_ID = ""; // e.g. "1234567890"
+export const META_PIXEL_ID = "2685807335177361"; // e.g. "1234567890"
 
 export const formatINR = (value: number) =>
   `₹${value.toLocaleString("en-IN")}`;
